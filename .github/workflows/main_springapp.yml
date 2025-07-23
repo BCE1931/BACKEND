@@ -28,9 +28,9 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Make mvnw executable
-        run: chmod +x ./mvnw
 
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
 
       - name: Build with Maven (skip tests)
         env:
@@ -46,7 +46,7 @@ jobs:
           SPRING_JWT_EXPIRATION_TIME: ${{ secrets.SPRING_JWT_EXPIRATION_TIME }}
           SPRING_JWT_REFRESH_EXPIRATION_TIME: ${{ secrets.SPRING_JWT_REFRESH_EXPIRATION_TIME }}
           SPRING_JWT_SECRET: ${{ secrets.SPRING_JWT_SECRET }}
-        run: ./mvnw clean package -DskipTests -Pprod
+        run: ./mvnw clean package -DskipTests --file pom.xml
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -54,22 +54,10 @@ jobs:
           name: java-app
           path: target/*.jar
 
-      - name: Deploy to Azure Web App
+      - name: Deploy to Azure Web App using publish profile
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'springapp'
+          app-name: 'springapp' # Replace with your actual Azure App Service name
           slot-name: 'production'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: 'target/*.jar'
-        env:
-          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
-          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
-          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
-          SPRING_GITHUB_CLIENT_ID: ${{ secrets.SPRING_GITHUB_CLIENT_ID }}
-          SPRING_GITHUB_CLIENT_REDIRECTING_URI: ${{ secrets.SPRING_GITHUB_CLIENT_REDIRECTING_URI }}
-          SPRING_GITHUB_CLIENT_SECRET: ${{ secrets.SPRING_GITHUB_CLIENT_SECRET }}
-          SPRING_GOOGLE_CLIENT_ID: ${{ secrets.SPRING_GOOGLE_CLIENT_ID }}
-          SPRING_GOOGLE_CLIENT_REDIRECTING_URI: ${{ secrets.SPRING_GOOGLE_CLIENT_REDIRECTING_URI }}
-          SPRING_GOOGLE_CLIENT_SECRET: ${{ secrets.SPRING_GOOGLE_CLIENT_SECRET }}
-          SPRING_JWT_EXPIRATION_TIME: ${{ secrets.SPRING_JWT_EXPIRATION_TIME }}
-          SPRING_JWT_REFRESH_EXPIRATION_TIME: ${{ secrets.SPRING_JWT_REFRESH_EXPIRATION_TIME }}
-          SPRING_JWT_SECRET: ${{ secrets.SPRING_JWT_SECRET }}
