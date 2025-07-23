@@ -46,18 +46,18 @@ jobs:
           SPRING_JWT_EXPIRATION_TIME: ${{ secrets.SPRING_JWT_EXPIRATION_TIME }}
           SPRING_JWT_REFRESH_EXPIRATION_TIME: ${{ secrets.SPRING_JWT_REFRESH_EXPIRATION_TIME }}
           SPRING_JWT_SECRET: ${{ secrets.SPRING_JWT_SECRET }}
-        run: ./mvnw clean package -DskipTests --file pom.xml
+        run: ./mvnw clean package -DskipTests
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: java-app
-          path: target/*.jar
+          path: target/backend-0.0.1-SNAPSHOT.jar
 
       - name: Deploy to Azure Web App using publish profile
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'springapp' # Replace with your actual Azure App Service name
+          app-name: 'springapp' # Replace if your app name is different
           slot-name: 'production'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISHPROFILE }}
-          package: 'target/*.jar'
+          package: 'target/backend-0.0.1-SNAPSHOT.jar'
