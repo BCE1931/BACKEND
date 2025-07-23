@@ -46,18 +46,28 @@ jobs:
           SPRING_JWT_EXPIRATION_TIME: ${{ secrets.SPRING_JWT_EXPIRATION_TIME }}
           SPRING_JWT_REFRESH_EXPIRATION_TIME: ${{ secrets.SPRING_JWT_REFRESH_EXPIRATION_TIME }}
           SPRING_JWT_SECRET: ${{ secrets.SPRING_JWT_SECRET }}
-        run: ./mvnw clean package -DskipTests
+        run: ./mvnw clean package -DskipTests --file pom.xml
+
+      - name: List JAR files
+        run: ls -lh target/
+
+      - name: Fail if JAR not found
+        run: |
+          if [ -z "$(ls target/*.jar 2>/dev/null)" ]; then
+            echo "❌ No JAR file found in target/ — check your Maven build.";
+            exit 1;
+          fi
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: java-app
-          path: target/backend-0.0.1-SNAPSHOT.jar
+          path: target/*.jar
 
       - name: Deploy to Azure Web App using publish profile
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'springapp' # Replace if your app name is different
+          app-name: 'springapp' # Replace with your actual app name
           slot-name: 'production'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISHPROFILE }}
-          package: 'target/backend-0.0.1-SNAPSHOT.jar'
+          package: 'target/*.jar'
