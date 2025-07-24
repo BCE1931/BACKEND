@@ -1,6 +1,3 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
 name: Build and deploy JAR app to Azure Web App - springwebapp1402
 
 on:
@@ -10,54 +7,67 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
+    environment: BACKEND
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Java version
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'microsoft'
+          distribution: 'temurin'
 
-      - name: Build with Maven
-        run: mvn clean install
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
+
+      - name: Build with Maven (skip tests)
+        env:
+          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+          SPRING_GITHUB_CLIENT_ID: ${{ secrets.SPRING_GITHUB_CLIENT_ID }}
+          SPRING_GITHUB_CLIENT_REDIRECTING_URI: ${{ secrets.SPRING_GITHUB_CLIENT_REDIRECTING_URI }}
+          SPRING_GITHUB_CLIENT_SECRET: ${{ secrets.SPRING_GITHUB_CLIENT_SECRET }}
+          SPRING_GOOGLE_CLIENT_ID: ${{ secrets.SPRING_GOOGLE_CLIENT_ID }}
+          SPRING_GOOGLE_CLIENT_REDIRECTING_URI: ${{ secrets.SPRING_GOOGLE_CLIENT_REDIRECTING_URI }}
+          SPRING_GOOGLE_CLIENT_SECRET: ${{ secrets.SPRING_GOOGLE_CLIENT_SECRET }}
+          SPRING_JWT_EXPIRATION_TIME: ${{ secrets.SPRING_JWT_EXPIRATION_TIME }}
+          SPRING_JWT_REFRESH_EXPIRATION_TIME: ${{ secrets.SPRING_JWT_REFRESH_EXPIRATION_TIME }}
+          SPRING_JWT_SECRET: ${{ secrets.SPRING_JWT_SECRET }}
+        run: ./mvnw clean package -DskipTests --file pom.xml
+
+      - name: List JAR files
+        run: ls -lh target/
+
+      - name: Fail if JAR not found
+        run: |
+          if [ -z "$(ls target/*.jar 2>/dev/null)" ]; then
+            echo "❌ No JAR file found in target/ — check your Maven build.";
+            exit 1;
+          fi
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: java-app
-          path: '${{ github.workspace }}/target/*.jar'
+          path: target/*.jar
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
-  
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: java-app
-      
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_B52BE8039B49461EA933C632871427DE }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_BC2492EC0C7C4908B9D0E5289DB34F69 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_58FE4971F6394AF7A2AB3099901C66E2 }}
-
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
+      - name: Deploy to Azure Web App using publish profile
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'springwebapp1402'
-          slot-name: 'Production'
-          package: '*.jar'
-          
+          app-name: 'springwebapp1402' # Replace with your actual app name
+          slot-name: 'production'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISHPROFILE }}
+          package: 'target/*.jar'
