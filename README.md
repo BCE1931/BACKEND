@@ -1,4 +1,4 @@
-## 🚀 Live on [vise.codes](https://revise.codes)
+## 🚀 Live on [revise.codes](https://revise.codes)
 
 ### 🖥️ Frontend  
 - **Repository:** [FRONTEND (GitHub)](https://github.com/BCE1931/FRONTEND.git)  
